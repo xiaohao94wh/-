@@ -38,9 +38,48 @@
 &emsp;[4.24 脚步声和跳跃声 Footstep and Jump Sounds](#4.24)  
 &emsp;[4.25 瞄准走](#4.25)  
 [五、射击武器](#5)  
+&emsp;[5.1 炮弹武器 Projectile Weapon Class](#5.1)  
+&emsp;[5.2 火蒙太奇 Fire Montage](#5.2)  
+&emsp;[5.3 火武器效果](#5.3)  
+&emsp;[5.4 多人游戏中的火效果 Fire Effects in Multiplayer](#5.4)  
+&emsp;[5.5 击中目标 The Hit Target](#5.5)  
+&emsp;[5.6 生成炮弹 Spawning the Projectile](#5.6)  
+&emsp;[5.7 炮弹移动组件](#5.7)  
+&emsp;[5.8 炮弹追踪 Projectile Tracer](#5.8)  
+&emsp;[5.9 重复击中目标](#5.9)  
+&emsp;[5.10 炮弹命中事件](#5.10)  
+&emsp;[5.11 弹壳](#5.11)  
+&emsp;[5.12 弹壳的物理性质](#5.12)  
 [六、武器瞄准机制](#6)  
+&emsp;[6.1 角色HUD和玩家控制器 Blaster HUD and Player Controller](#6.1)  
+&emsp;[6.1 绘制准星 Drawing the Crosshairs](#6.1)  
+&emsp;[6.1 武器旋转矫正 Correcting the Weapon Rotation](#6.1)  
+&emsp;[6.1 瞄准缩放 Zoom While Aiming](#6.1)  
+&emsp;[6.1 准星缩放 Shrink Crosshairs when Aiming](#6.1)  
+&emsp;[6.1 改变准星颜色](#6.1)  
+&emsp;[6.1 扩展跟踪开始 Extending the Trace Start](#6.1)  
+&emsp;[6.1 命中角色](#6.1)  
+&emsp;[6.1 平滑代理角色的旋转 Smooth Rotation for Proxies](#6.1)  
+&emsp;[6.1 自动开火 Automatic Fire](#6.1)  
+&emsp;[6.1 测试](#6.1)  
 [七、健康状况和玩家统计数据](#7)  
+&emsp;[7.1 游戏框架 Game Framework](#7.1)  
+&emsp;[7.1 血量 Health](#7.1)  
+&emsp;[7.1 更新血量 Update Health in the HUD](#7.1)  
+&emsp;[7.1 伤害 Demage](#7.1)  
+&emsp;[7.1 角色游戏模式 Blaster Game Mode](#7.1)  
+&emsp;[7.1 消除动画 Elim Animation](#7.1)  
+&emsp;[7.1 重生 Respawning](#7.1)  
+&emsp;[7.1 物质溶解 Dissolve Material](#7.1)  
+&emsp;[7.1 溶解角色](#7.1)  
+&emsp;[7.1 溶解曲线 Dissolving with Curves](#7.1)  
+&emsp;[7.1 被消除时禁止移动 Disable Movement when Elimmed](#7.1)  
+&emsp;[7.1 消除机器人](#7.1)  
+&emsp;[7.1 拥有状态 On Possess](#7.1)  
+&emsp;[7.1 角色状态 Blaster Player State](#7.1)  
+&emsp;[7.1 战败 Defeats](#7.1)  
 [八、弹药](#8)  
+&emsp;[8.1 ]
 [九、匹配状态](#9)  
 [十、不同武器类型](#10)  
 [十一、拾取](#11)  
@@ -208,6 +247,7 @@ Roll 你可以想象成左右晃脑，绕 X轴运动。
 
 
 
+<span id = "3.7">
 
 **3.7 动画蓝图**
 
@@ -223,6 +263,10 @@ Roll 你可以想象成左右晃脑，绕 X轴运动。
 <span id = "4">
 
 **四、武器**
+
+
+
+
 
 
 
