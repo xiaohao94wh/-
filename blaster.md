@@ -8,7 +8,7 @@
 &emsp;[3.1 项目创建及准备工作](#3.1)  
 &emsp;[3.2 资产 Assets](#3.2)  
 &emsp;[3.3 动画及重定向 Retargeting Animations](#3.3)  
-&emsp;[3.4 游戏创建](#3.4)  
+&emsp;[3.4 角色创建](#3.4)  
 &emsp;[3.5 摄像机和弹簧臂 Camera and Spring Arm](#3.5)  
 &emsp;[3.6 人物移动](#3.6)  
 &emsp;[3.7 动画蓝图](#3.7)  
@@ -277,21 +277,119 @@
 
 **3.1 项目创建及准备工作**
 
+
+
+
 <span id = "3.2">
 
 **3.2 资产 Assets**
+
+所需要的资产大概有以下几个
+
+1. Military Weapons Silver
+![alt text](assets/blaster/image-1.png)
+提供武器模型、武器音效、武器特效等等
+
+2. Unreal Learning Kit: Games/虚幻学习工具包
+
+需要使用其中的动画、骨骼
+
+3. Animation Starter Pack/动画初学者内容包
+
+提供一些射击动画，但是确实站立和蹲下的动画，需要去mixamo获取资源
+
+
+
 
 <span id = "3.3">
 
 **3.3 动画及重定向 Retargeting Animations**
 
+
+动画依附于骨骼，人物模型的骨骼链不同，想要获取不同的动画并应用在我们想要的模型上，需要将目标模型和源模型之间骨骼链对应上，若骨骼链不同，就需要IK Rig分别对骨骼绑定相同的骨骼链，然后使用IK Retargeter
+
+1. mixamo下载动画  
+https://blog.csdn.net/m0_55220082/article/details/136478445
+
+
+2. 动画重定向
+使用IK Rig对两个骨骼重定向链条(记得设置重定向根在 “SK_Mannequin” 和 “MixamoCharacter” 的 “骨盆” 处)
+
+使用IK Retargeter，将源和目标资产的姿势调整到一样，导出动画
+![alt text](assets/blaster/image-3.png)
+![alt text](assets/blaster/image-4.png)
+
+
+
+3. 资产迁移
+
+可以将动画的后缀名 “_Retargeted”删去
+将资产都迁移到Blaster的content目录下，重复的就覆盖掉，迁移好后，再在Blaster中整理
+
+
+
 <span id = "3.4">
 
-**3.4 游戏创建**
+**3.4 角色创建**
+
+1. 创建角色c++类
+选择Character
+删去添加头文件的代码行 “#include "Character/BlasterCharacter.h"” 中的 “Character\”
+
+
+2. 创建蓝图类
+
+创建基于 “BlasterCharacter” 的 “蓝图”（BluePrint）类 “BP_BlasterCharacter”，保存在目录 “/Content/Blueprints/Character/”
+
+将网格体设置成我们的模型
+
+调整网格体位置，使得 “胶囊体组件 (CollisionCylinder)” 能完全包裹 “网格体 (CharacterMesh0) (骨骼网格体组件)”
+
 
 <span id = "3.5">
 
 **3.5 摄像机和弹簧臂 Camera and Spring Arm**
+
+将蓝图类拖入关卡，在右侧细节面板中将 “Pawn” 选项卡下的 “自动控制玩家”（Auto possess player）改为 “玩家 0”（Player 0），此时开始可以看到摄像机位于 “BP_BlasterCharacter” 的内部。
+摄像头组件Camera和弹簧臂组件Spring Arm可以控制我们拥有角色时的视图
+
+
+<details><summary>BlasterCharacter.h</summary>
+
+```cpp
+private:
+	UPROPERTY(VisibleAnywhere, Category = Camera)	
+	class USpringArmComponent* CameraBoom;
+
+	UPROPERTY(VisibleAnyWhere, Category = Camera)
+	class UCameraComponent* FollowCamera;
+```
+</details>
+
+
+<details><summary>BlasterCharacter.cpp</summary>
+
+```cpp
+ABlasterCharacter::ABlasterCharacter()
+{
+ 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+	PrimaryActorTick.bCanEverTick = true;
+
+	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));	// 基于弹簧臂组件类创建对象
+	CameraBoom->SetupAttachment(GetMesh());											// 设置弹簧臂附加到角色的骨骼网格体组件，如果附加到胶囊体上，角色在做蹲下的动作时，由于胶囊体的大小和路线会发生改变，弹簧臂的高度也会发生改变（弹簧臂将会移动）
+	CameraBoom->TargetArmLength = 600.f;											// 设置弹簧臂长度
+	CameraBoom->bUsePawnControlRotation = true;										// 设置弹簧臂跟随角色控制器旋转
+
+	// 创建摄像机对象 FollowCamera 并设置 FollowCamera 的默认属性
+	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));	// 基于摄像机组件类创建对象
+	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);		// 将摄像机附加到弹簧臂 CameraBoom 上，并指定插槽名为虚幻引擎摄像机组件成员变量 SocketName
+	FollowCamera->bUsePawnControlRotation = false;
+
+}
+```
+</details>
+
+角色拥有了摄像机和弹簧臂，是的我们可以有一个第三人称视角
 
 
 <span id = "3.6">
@@ -395,6 +493,136 @@ Roll 你可以想象成左右晃脑，绕 X轴运动。
 <span id = "3.7">
 
 **3.7 动画蓝图**
+
+本节为角色的移动创建动画，需要Animinstance类
+
+1. 创建Animinstance类及蓝图类
+
+![alt text](assets/blaster/image-5.png)
+
+<details><summary>BlasterAnimInstance.h</summary>
+
+```cpp
+public:
+	virtual void NativeInitializeAnimation() override;
+	virtual void NativeUpdateAnimation(float DeltaTime) override;
+
+private:
+	UPROPERTY(BlueprintReadOnly, Category = Character, meta = (AllowPrivateAccess = "true"))	// 属性说明符：仅在蓝图中可读，类别为 “Character”；
+	class ABlasterCharacter* BlasterCharacter;
+
+	UPROPERTY(BlueprintReadOnly, Category = Movement, meta = (AllowPrivateAccess = "true"))
+	float Speed;
+
+	UPROPERTY(BlueprintReadOnly, Category = Movement, meta = (AllowPrivateAccess = "true"))
+	bool bIsInAir;
+
+	UPROPERTY(BlueprintReadOnly, Category = Movement, meta = (AllowPrivateAccess = "true"))
+	bool bIsAccelerating;
+```
+</details>
+
+
+<details><summary>BlasterAnimInstance.cpp</summary>
+
+```cpp
+void UBlasterAnimInstance::NativeInitializeAnimation()					// 原生（Native）类初始化函数 NativeInitializeAnimation() 重写
+{
+	Super::NativeInitializeAnimation();									// 调用父类 AnimInstance 的 NativeInitializeAnimation() 函数
+
+	// https://blog.csdn.net/ttm2d/article/details/106550682
+	BlasterCharacter = Cast<ABlasterCharacter>(TryGetPawnOwner());		// 获取动画蓝图实例所属，并向下强制转换（Cast）为 ABlasterCharacter 类
+
+}
+
+void UBlasterAnimInstance::NativeUpdateAnimation(float DeltaTime)		// 原生（Native）类更新函数 NativeUpdateAnimation() 重写，用于在每一帧调用以更新动画
+{
+	Super::NativeUpdateAnimation(DeltaTime);							// 调用父类 AnimInstance 的 NativeUpdateAnimation() 函数
+
+	if (BlasterCharacter == nullptr) {									// 检查 BlasterCharacter 是否声明
+		BlasterCharacter = Cast<ABlasterCharacter>(TryGetPawnOwner());	// 获取动画蓝图实例所属，并向下强制转换（Cast）为 ABlasterCharacter 类
+	}
+	if (BlasterCharacter == nullptr) return;
+
+
+	FVector Velocity = BlasterCharacter->GetVelocity();					// 获取角色速度向量
+	Velocity.Z = 0.f;													// 不关心 Z 轴速度，设置为 0
+	Speed = Velocity.Size();											// 获取角色速度向量的模（大小）
+
+	bIsInAir = BlasterCharacter->GetCharacterMovement()->IsFalling();	// 调用 GetCharacterMovement()->IsFalling() 函数判断角色是否掉落从而判断角色是否在空中，
+	// 需要添加头文件 "GameFramework/CharacterMovementComponent.h"
+
+	bIsAccelerating = BlasterCharacter->GetCharacterMovement()->GetCurrentAcceleration().Size() > 0 ? true : false;	// 调用 GetCharacterMovement()->GetCurrentAcceleration() 获取角色加速度
+	// 判断加速度是否的维度是否大于 0 ，大于 0 说明某个方向上有加速度
+}
+```
+</details>
+
+
+编译后创建蓝图类，选择骨骼和父类
+
+2. 在蓝图类创建状态机
+
+![alt text](assets/blaster/image-6.png)
+
+![状态机编辑](assets/blaster/image-7.png)
+
+IdleWalkRun to JumpStart
+若是在空，则表示起跳了
+![alt text](assets/blaster/image-8.png)
+
+对于 “JumpStart to Falling” 状态转换，在右侧 “细节”（Details） 面板启用 “基于状态中的序列播放器的自动规则”（Automatic Rule Based on Sequence Player in State）选项，这样在状态 “JumpStart” 动画播放完毕状态结束后会自动过渡到状态 “Falling”。
+![alt text](assets/blaster/image-9.png)
+
+对于 “Falling to JumpStop” 的状态转换，加一个NOT Boolean 节点
+![alt text](assets/blaster/image-10.png)
+
+![alt text](assets/blaster/image-11.png)
+
+![alt text](assets/blaster/image-12.png)
+
+![alt text](assets/blaster/image-13.png)
+
+JumpStop to ldleWalkRun
+当动画剩余不超过10%时转换
+![alt text](assets/blaster/image-14.png)
+
+
+3. 一维混合空间
+
+对于角色水平状态移动的状态机 “IdleWalkRun” 节点，我们需要创建混合空间（Blend Space），从而实现人物由怠速至行走至跑步的自然过渡。
+
+创建blend space 1D
+
+在右侧 “资产浏览器”（Asset Browser）中将动画 “EpicCharacter_Idle” 、“EpicCharacter_Walk” 和 “EpicCharacter_Run” 拖拽至编辑器下方 “动画序列” 面板中。
+在左侧 “资产细节”（Asset Details）面板设置 “水平坐标”（Horizontal Axis） 的“名称”（Name）为 “Speed”，“最大轴值”（Maximum Axis Value）为 350，并在 “动画序列” 面板中对 “EpicCharacter_Walk” 和 “EpicCharacter_Run” 进行拖拽、调整。
+![alt text](assets/blaster/image-16.png)
+
+
+IdleWalkRun
+![alt text](assets/blaster/image-17.png)
+
+修改角色蓝图类的动画模式
+![alt text](assets/blaster/image-19.png)
+
+
+为了让移动更合理,添加两行代码，并在蓝图中进行相应设置
+
+```cpp
+	bUseControllerRotationYaw = false;												// 设置人物不跟随控制器（镜头）转向，也可以在 BP_BlasterCharacter 蓝图编辑器中实现
+	GetCharacterMovement()->bOrientRotationToMovement = true;						// 获取角色移动组件，角色移动时向加速度方向旋转角色，也可以在 BP_BlasterCharacter 蓝图编辑器中实现
+```
+
+![alt text](assets/blaster/image-20.png)
+![alt text](assets/blaster/image-21.png)
+
+* 关于人物转向问题
+https://blog.csdn.net/u012249992/article/details/83186907
+https://www.bilibili.com/read/cv19334054/
+
+
+
+
 
 <span id = "3.8">
 
