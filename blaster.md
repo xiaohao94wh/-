@@ -630,16 +630,53 @@ https://www.bilibili.com/read/cv19334054/
 
 seamless travel
 
+* seamless travel
+![alt text](assets/blaster/image-23.png)
+
+* nonseamless travel
+指断开连接再重新连接
+第一次加载地图
+第一次加载服务器
+结束多人游戏并开始新游戏
+![alt text](assets/blaster/image-22.png)
+
+
+SeverTravel
+![alt text](assets/blaster/image-24.png)
+![alt text](assets/blaster/image-25.png)
+
+
+
+
 
 
 
 transition level
 
-
+![alt text](assets/blaster/image-29.png)
 
 
 
 lobby game mode
+
+![alt text](assets/blaster/image-26.png)
+
+该类记录lobby人数
+
+
+将学习包的showcase level复制到我们的maps文件夹，当人数满了我们传送到该关卡
+
+创建一个lobby game mode蓝图类，
+
+将default pawn class设置成我们的角色蓝图类
+![alt text](assets/blaster/image-27.png)
+
+修改lobby level
+![alt text](assets/blaster/image-28.png)
+
+此时删除关卡中的人物，进入关卡会自动生成一个角色
+
+
 
 
 
