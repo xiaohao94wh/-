@@ -628,13 +628,26 @@ https://www.bilibili.com/read/cv19334054/
 
 **3.8 无缝传送 Seamless travel and lobby**
 
+seamless travel
+
+
+
+
+transition level
+
+
+
+
+
+lobby game mode
+
+
+
+
+
 <span id = "3.9">
 
 **3.9 网络规则 Network Role**
-
-
-
-
 
 
 
