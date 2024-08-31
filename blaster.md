@@ -628,12 +628,13 @@ https://www.bilibili.com/read/cv19334054/
 
 **3.8 无缝传送 Seamless travel and lobby**
 
-seamless travel
-
 * seamless travel
+![alt text](assets/blaster/image-30.png)
+ 
+seamless travel
 ![alt text](assets/blaster/image-23.png)
 
-* nonseamless travel
+nonseamless travel
 指断开连接再重新连接
 第一次加载地图
 第一次加载服务器
@@ -649,15 +650,14 @@ SeverTravel
 
 
 
-
-
-transition level
+* transition level
+![alt text](assets/blaster/image-31.png)
 
 ![alt text](assets/blaster/image-29.png)
+至于为什么需要设置过渡地图？试想如果没有过渡地图，那么在当前地图中加载（异步加载的，后面会详细介绍）的新地图之后，此时World同时存在新旧两个地图，如果都比较大的话，内存告急！
 
 
-
-lobby game mode
+* lobby game mode
 
 ![alt text](assets/blaster/image-26.png)
 
@@ -678,14 +678,110 @@ lobby game mode
 
 
 
-
-
-
+* 扩展知识
+[Level与World](https://www.zhihu.com/search?type=content&q=SeamlessTravel)
+[无缝切换](https://blog.csdn.net/ttod/article/details/135868749)
+[无缝切换官方文档]https://dev.epicgames.com/documentation/zh-cn/unreal-engine/travelling-in-multiplayer?application_version=4.27
 
 <span id = "3.9">
 
 **3.9 网络规则 Network Role**
 
+* None：该Actor在网络游戏中没有扮演任何角色，并且不会进行数据复制
+* Authority：该Actor具有权威性（通常只在服务器上出现），并且将其信息复制到其他机器（客户端）上它的远程代理Actor上
+* Simulated Proxy：该Actor是一个模拟代理，并不被本机的输入所控制，它在模拟另一台机器(服务器)上的权威Actor。在网络游戏中，大多数Actor，比如可拾取物品、投射物或其他可交互对象等，在远程客户端上都会显示为Simulated Proxy
+* Autonomous Proxy：该Actor是一个远程自主代理（类似自治区的概念，能够自治，但是中央仍然要管控），能够接收本地的一些输入，执行一些功能，但会从权威Actor那里接收校正。自主代理通常用于玩家直接控制的角色，比如游戏中的Pawn
+
+Network Role属性通过Local Role和Remote Role变量来跟踪，Local Role表示该Actor在本机上的权限属性，而Remote Role表示该Actor在远程服务器或客户端上的权限属性。
+
+
+
+https://blog.csdn.net/Motarookie/article/details/138014921?spm=1001.2014.3001.5502
+
+
+1. c++类
+![alt text](assets/blaster/image-33.png)
+
+<details><summary>OverHeadWidget.h</summary>
+
+```cpp
+public:
+	UPROPERTY(meta = (BindWidget))	// 将c++变量与蓝图组件绑定
+	class UTextBlock* DisplayText;
+
+	void SetDisplayText(FString TextToDisplay);
+
+	UFUNCTION(BlueprintCallable)
+	void ShowPlayerNetRole(APawn* InPawn);
+	
+protected:
+	//virtual void OnLevelRemovedFromWorld(ULevel* InLevel, UWorld* InWorld) override;   在UE5.1被移除了
+	virtual void NativeDestruct() override;
+```
+</details>
+
+
+<details><summary>OverHeadWidget.cpp</summary>
+
+```cpp
+// Fill out your copyright notice in the Description page of Project Settings.
+
+
+#include "OverHeadWidget.h"
+#include "Components/TextBlock.h"
+
+void UOverHeadWidget::SetDisplayText(FString TextToDisplay)
+{
+	if (DisplayText)
+	{
+		DisplayText->SetText(FText::FromString(TextToDisplay));
+	}
+}
+
+void UOverHeadWidget::ShowPlayerNetRole(APawn* InPawn)
+{
+	ENetRole LocalRole = InPawn->GetLocalRole();
+	FString Role;
+	switch (LocalRole)
+	{
+	case ENetRole::ROLE_None:
+		Role = "None";
+		break;
+	case ENetRole::ROLE_SimulatedProxy:
+		Role = "Simulated Proxy";
+		break;
+	case ENetRole::ROLE_AutonomousProxy:
+		Role = "Autonomous Proxy";
+		break;
+	case ENetRole::ROLE_Authority:
+		Role = "Authority";
+		break;
+	}
+	FString LocalRoleString = FString::Printf(TEXT("Local Role: %s"), *Role);
+	SetDisplayText(LocalRoleString);
+}
+
+void UOverHeadWidget::NativeDestruct()
+{
+	RemoveFromParent();
+	Super::NativeDestruct();
+}
+```
+</details>
+
+
+
+```cpp
+// BlasterCharacter.h
+UPROPERTY(EditAnyWhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+class UWidgetComponent* OverHeadWidget;
+```
+
+```cpp
+// BlasterCharacter.cpp
+OverHeadWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("OverHeadWidget"));
+OverHeadWidget->SetupAttachment(RootComponent);
+```
 
 
 
