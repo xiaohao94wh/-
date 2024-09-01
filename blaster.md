@@ -13,12 +13,12 @@
 &emsp;[3.6 人物移动](#3.6)  
 &emsp;[3.7 动画蓝图](#3.7)  
 &emsp;[3.8 无缝传送 Seamless travel and lobby](#3.8)  
-&emsp;[3.9 网络规则 Network Role](#3.9)  
+&emsp;[3.9 网络角色 Network Role](#3.9)  
 
 <font size=4>[四、武器](#4)</font>
 
 &emsp;[4.1 武器类](#4.1)  
-&emsp;[4.2 捡子弹 Pickup Widget](#4.2)  
+&emsp;[4.2 拾取物 Pickup Widget](#4.2)  
 &emsp;[4.3 变量复制 Variable Replication](#4.3)  
 &emsp;[4.4 装备武器 Equipping Weapons](#4.4)  
 &emsp;[4.5 远程过程调用 Remote Procedure Calls](#4.5)  
@@ -685,7 +685,7 @@ SeverTravel
 
 <span id = "3.9">
 
-**3.9 网络规则 Network Role**
+**3.9 网络角色 Network Role**
 
 * None：该Actor在网络游戏中没有扮演任何角色，并且不会进行数据复制
 * Authority：该Actor具有权威性（通常只在服务器上出现），并且将其信息复制到其他机器（客户端）上它的远程代理Actor上
@@ -792,9 +792,296 @@ OverHeadWidget->SetupAttachment(RootComponent);
 **四、武器**
 
 
+<span id = "4.1">
+
+**4.1 武器类**
+
+* weapon class
+
+actor类
+![alt text](assets/blaster/image-34.png)
 
 
 
+球体重叠检测，最好只在服务器上这么干说是
+
+
+bReplicates干啥用的
+// 因为只在服务器见检测碰撞，所以状态变化需要复制
+// Actor使可复制的，其中变量才可以设置Replicated
+
+EWS_Max调用时可以知道变量最大数值
+
+
+
+```cpp
+AreaSphere = CreateDefaultSubobject<USphereComponent>(TEXT("AreaSphere"));
+//写成了
+AreaSphere->CreateDefaultSubobject<USphereComponent>(TEXT("AreaSphere"));
+//导致每次编译一直崩溃。。。我真是2b
+```
+
+
+<details><summary>Weapon.h</summary>
+
+```cpp
+#pragma once
+
+#include "CoreMinimal.h"
+#include "GameFramework/Actor.h"
+#include "Weapon.generated.h"
+
+UENUM(BlueprintType)
+enum class EWeaponState : uint8
+{
+	EWS_Initial UMETA(DisplayName = "Initial State"),
+	EWS_Equipped UMETA(DisplayName = "Equipped"),
+	EWS_Dropped UMETA(DisplayName = "Dropped"),
+
+	EWS_Max UMETA(DisplayName = "DefaultMax")
+};
+
+UCLASS()
+class BLASTER_API AWeapon : public AActor
+{
+	GENERATED_BODY()
+	
+public:	
+	AWeapon();
+	virtual void Tick(float DeltaTime) override;
+
+protected:
+	virtual void BeginPlay() override;
+
+	UFUNCTION()
+	virtual void OnSphereOverlap(
+		UPrimitiveComponent* OverlappedComponent,
+		AActor* OtherActor,
+		UPrimitiveComponent* OtherComp,
+		int32 OtherBodyIndex,
+		bool bFromSweep,
+		const FHitResult& SweepResult
+	);
+
+private:	
+	UPROPERTY(VisibleAnywhere, Category = "Weapon Properties")
+	USkeletalMeshComponent* WeaponMesh;
+
+	UPROPERTY(VisibleAnywhere, Category = "Weapon Properties")
+	class USphereComponent* AreaSphere;
+
+	UPROPERTY(VisibleAnywhere, Category = "Weapon Properties")
+	EWeaponState WeaponState;
+
+	UPROPERTY(VisibleAnywhere, Category = "Weapon Properties")
+	class UWidgetComponent* PickupWidget;
+};
+```
+</details>
+
+
+
+<details><summary>Weapon.cpp</summary>
+
+```cpp
+#include "Weapon.h"
+#include "Components/SphereComponent.h"
+#include "Components/WidgetComponent.h"
+#include "Blaster/Character/BlasterCharacter.h"
+
+// Sets default values
+AWeapon::AWeapon()
+{
+ 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+	PrimaryActorTick.bCanEverTick = false;
+
+	// 因为只在服务器见检测碰撞，所以状态变化需要复制
+	// Actor使可复制的，其中变量才可以设置Replicated
+	bReplicates = true;
+
+	WeaponMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("WeaponMesh"));
+	WeaponMesh->SetupAttachment(RootComponent);
+	SetRootComponent(WeaponMesh);
+
+	WeaponMesh->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Block); //为了让武器可以丢在地上
+	WeaponMesh->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Ignore);	//为了让pawn可以忽略
+	WeaponMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision); //一开始不想让武器有碰撞
+	
+	// 球体重叠检测，可以捡东西
+	AreaSphere = CreateDefaultSubobject<USphereComponent>(TEXT("AreaSphere"));
+	AreaSphere->SetupAttachment(RootComponent);
+	AreaSphere->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
+	AreaSphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+
+	PickupWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("PickupWidget"));
+	PickupWidget->SetupAttachment(RootComponent);
+}
+
+void AWeapon::BeginPlay()
+{
+	Super::BeginPlay();
+	
+	//if (GetLocalRole() == ENetRole::ROLE_Authority)
+	if (HasAuthority())
+	{
+		AreaSphere->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+		AreaSphere->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Overlap);	//启动对pawn的重叠检测
+		AreaSphere->OnComponentBeginOverlap.AddDynamic(this, &AWeapon::OnSphereOverlap);
+	}
+
+	if (PickupWidget)
+	{
+		PickupWidget->SetVisibility(false);
+	}
+}
+
+void AWeapon::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	ABlasterCharacter* BlasterCharacter = Cast<ABlasterCharacter>(OtherActor);
+	if (BlasterCharacter && PickupWidget)
+	{
+		PickupWidget->SetVisibility(true);
+	}
+}
+
+void AWeapon::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+}
+```
+</details>
+
+
+
+
+* 创建蓝图类
+
+调整包围盒，加入进地图
+
+
+
+
+<span id = "4.2">
+
+**4.2 拾取物 Pickup Widget**
+
+* 创建蓝图类
+![alt text](assets/blaster/image-35.png)
+
+
+* 添加代码
+```cpp
+// BlasterCharacter.h
+UPROPERTY(VisibleAnywhere, Category = "Weapon Properties")
+class UWidgetComponent* PickupWidget;
+```
+
+```cpp
+// BlasterCharacter.cpp
+PickupWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("PickupWidget"));
+PickupWidget->SetupAttachment(RootComponent);
+```
+
+* 在weapon蓝图类中调整widget组件
+
+
+
+
+
+
+<span id = "4.3">
+
+**4.3 变量复制 Variable Replication**
+
+<span id = "4.4">
+
+**4.4 装备武器 Equipping Weapons**
+
+<span id = "4.5">
+
+**4.5 远程过程调用 Remote Procedure Calls**
+
+<span id = "4.6">
+
+**4.6 装备动画姿势 Equipped Animation Pose**
+
+<span id = "4.7">
+
+**4.7 蹲下 Crouching**
+
+<span id = "4.8">
+
+**4.8 瞄准 Aiming**
+
+<span id = "4.9">
+
+**4.9 跑步混合空间 Running Blendspace**
+
+<span id = "4.10">
+
+**4.10 倾斜和扫射 Leaning and Strafing**
+
+<span id = "4.11">
+
+**4.11 走路和跳跃 Idle and Jumps**
+
+<span id = "4.12">
+
+**4.12 蹲走 Crouch Walking**
+
+<span id = "4.13">
+
+**4.13 瞄准走 Aim Walking**
+
+<span id = "4.14">
+
+**4.14 瞄准偏移 Aim Offsets**
+
+<span id = "4.15">
+
+**4.15 瞄准偏移应用**
+
+<span id = "4.16">
+
+**4.16 多人匹配 Pitch in Multiplayer**
+
+<span id = "4.17">
+
+**4.17 使用瞄准偏移**
+
+<span id = "4.18">
+
+**4.18 FABRIK IK**
+
+<span id = "4.19">
+
+**4.19 原地转弯 Turning in place**
+
+<span id = "4.20">
+
+**4.20 旋转根骨骼 Rotate Root Bone**
+
+<span id = "4.21">
+
+**4.21 网络更新频率**
+
+<span id = "4.22">
+
+**4.22 未装备时蹲着**
+
+<span id = "4.23">
+
+**4.23 跑步转弯动画 Rotating Running Animations**
+
+<span id = "4.24">
+
+**4.24 脚步声和跳跃声 Footstep and Jump Sounds**
+
+<span id = "4.25">
+
+**4.25 瞄准走**
 
 
 
